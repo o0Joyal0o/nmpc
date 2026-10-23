@@ -1,48 +1,109 @@
-<?xml version="1.0"?>
-<rviz version="1.0">
-  <Panel class="rviz/Displays" name="Displays">
-    <Property name="Fixed Frame" value="map"/>
-    <Property name="Name" value="Displays"/>
-    <Property name="Enabled" value="true"/>
-    <Display class="rviz/Grid" name="Grid">
-      <Property name="Line Style" value="Billboards"/>
-      <Property name="Cell Size" value="1"/>
-      <Property name="Color" value="165; 165; 165; 127"/>
-      <Property name="Plane Cell Count" value="10"/>
-      <Property name="Plane" value="XY"/>
-      <Property name="Name" value="Grid"/>
-      <Property name="Enabled" value="true"/>
-    </Display>
-    <Display class="rviz/TF" name="TF">
-      <Property name="Show Axes" value="true"/>
-      <Property name="Arrow Length" value="0.5"/>
-      <Property name="Show Names" value="true"/>
-      <Property name="Timeout" value="10"/>
-      <Property name="Ignore Transformer Warnings" value="false"/>
-      <Property name="Name" value="TF"/>
-      <Property name="Enabled" value="true"/>
-    </Display>
-    <Display class="rviz/Path" name="robot_0 path">
-      <Property name="Topic" value="/robot_0/path"/>
-      <Property name="Color" value="0; 255; 0; 255"/>
-      <Property name="Radius" value="0.02"/>
-      <Property name="Name" value="robot_0 path"/>
-      <Property name="Enabled" value="true"/>
-    </Display>
-    <Display class="rviz/Path" name="robot_1 path">
-      <Property name="Topic" value="/robot_1/path"/>
-      <Property name="Color" value="255; 0; 0; 255"/>
-      <Property name="Radius" value="0.02"/>
-      <Property name="Name" value="robot_1 path"/>
-      <Property name="Enabled" value="true"/>
-    </Display>
-    <Display class="rviz/PoseArray" name="Moving obstacles">
-      <Property name="Topic" value="/moving_obstacles"/>
-      <Property name="Color" value="255; 128; 0; 255"/>
-      <Property name="Shape" value="Sphere"/>
-      <Property name="Radius" value="0.3"/>
-      <Property name="Name" value="Moving obstacles"/>
-      <Property name="Enabled" value="true"/>
-    </Display>
-  </Panel>
-</rviz>
+Panels:
+  - Class: rviz/Displays
+    Help Height: 100
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /Status1
+        - /Grid1
+        - /TF1
+        - /robot_0 path1
+        - /robot_1 path1
+        - /Moving obstacles1
+    Splitter Ratio: 0.5394198894500732
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /2D Nav Goal1
+    Name: Tool Properties
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+  - Class: rviz/Time
+    Name: Time
+  - Class: rviz/Help
+    Name: Help
+Preferences:
+  Save All On Exit: false
+  Default Topic: ''
+  Default Service: ''
+  Panels:
+    - Class: rviz/Displays
+      Name: Displays
+    - Class: rviz/Selection
+      Name: Selection
+    - Class: rviz/Tool Properties
+      Name: Tool Properties
+    - Class: rviz/Views
+      Name: Views
+    - Class: rviz/Time
+      Name: Time
+    - Class: rviz/Help
+      Name: Help
+Toolbars:
+  - Class: rviz/ToolToolBar
+  - Class: rviz/NavigateToolBar
+Visualization Manager:
+  Class: ''
+  Displays:
+    - Class: rviz/Grid
+      Cell Size: 1
+      Color: 165; 165; 165; 127
+      Enabled: true
+      Line Style: Billboards
+      Name: Grid
+      Plane: XY
+      Plane Cell Count: 10
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 10
+      Frames:
+        Enabled: true
+      Marker Scale: 1
+      Name: TF
+      Show Axes: true
+      Show Names: true
+      Tree:
+        robot_0/base_link:
+          robot_0/base_link:
+        robot_1/base_link:
+          robot_1/base_link:
+      Update Interval: 0
+      Value: true
+    - Class: rviz/Path
+      Color: 0; 255; 0
+      Enabled: true
+      Line Style: Billboards
+      Name: robot_0 path
+      Radius: 0.02
+      Topic: /robot_0/path
+    - Class: rviz/Path
+      Color: 255; 0; 0
+      Enabled: true
+      Line Style: Billboards
+      Name: robot_1 path
+      Radius: 0.02
+      Topic: /robot_1/path
+    - Class: rviz/PoseArray
+      Color: 255; 128; 0
+      Enabled: true
+      Name: Moving obstacles
+      Radius: 0.3
+      Shape: Sphere
+      Topic: /moving_obstacles
+    - Class: rviz/NavGoal
+      Enabled: true
+      Name: 2D Nav Goal
+      Topic: /move_base_simple/goal
+  Enabled: true
+  Name: Visualization Manager
+  Notes: ''
+  Status: []
+  Tree: ''
+Background Color: 48; 48; 48
+Default Grid: rviz/Grid
+Background Color: 48; 48; 48
+Default Grid: rviz/Grid
