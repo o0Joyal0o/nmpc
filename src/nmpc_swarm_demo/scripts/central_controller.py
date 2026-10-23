@@ -174,7 +174,7 @@ class CentralController:
             dy_o = xk[1] - p[7]
             dist2_o = dx_o * dx_o + dy_o * dy_o + 1e-3
             # soft penalty: if dist2 < d_min^2, add quadratic penalty
-            viol_o = fmax(0.0, self.d_min ** 2 - dist2_o)
+            viol_o = ca.fmax(0.0, self.d_min ** 2 - dist2_o)
             cost += self.w_avoid * viol_o ** 2
 
             # Obstacle soft avoidance
@@ -184,7 +184,7 @@ class CentralController:
                 dx = xk[0] - ox
                 dy = xk[1] - oy
                 dist2 = dx * dx + dy * dy + 1e-3
-                viol = fmax(0.0, self.d_obs_min ** 2 - dist2)
+                viol = ca.fmax(0.0, self.d_obs_min ** 2 - dist2)
                 cost += self.w_avoid * viol ** 2
 
         # Terminal cost (same as stage at last step)

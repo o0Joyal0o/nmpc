@@ -19,6 +19,7 @@ import rospy
 import gazebo_msgs.srv
 from geometry_msgs.msg import PoseArray, Pose, Point, Quaternion
 from std_msgs.msg import Header
+import gazebo_msgs.srv
 
 
 class MovingObstacles:
@@ -76,7 +77,7 @@ class MovingObstacles:
 
     def _sdf_cylinder(self, name, radius, height, color):
         """Build an inline SDF for an orange cylinder obstacle."""
-        rgba = color.replace(" ", "")
+        rgba = color.replace(" ", ",")
         r, g, b, a = [float(v) for v in rgba.split(",")]
         return (
             '<?xml version="1.0" ?>\n'
@@ -103,7 +104,7 @@ class MovingObstacles:
         for obs in self.obstacles:
             sdf = self._sdf_cylinder(obs["name"], self.obstacle_radius, self.obstacle_height, self.obstacle_color)
             start_x, start_y = obs["start"]
-            pose = gazebo_msgs.msg.Pose()
+            pose = Pose()
             pose.position.x = start_x
             pose.position.y = start_y
             pose.position.z = self.obstacle_height / 2.0

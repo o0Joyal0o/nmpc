@@ -1,7 +1,6 @@
 <launch>
   <!--
     nmpc_swarm_demo demo.launch
-    -----------------------------
     Launches Gazebo Classic with an empty ground plane, spawns two
     box_bot differential-drive robots (robot_0 at (0,0), robot_1 at (0,1)),
     starts the moving obstacles node and the single central NMPC controller,
@@ -32,13 +31,13 @@
 
   <!-- Spawn robot_0 at (0, 0) -->
   <node pkg="gazebo_ros" type="spawn_model" name="spawn_robot_0" output="screen"
-        args="-param robot_description -model robot_0 -x 0 -y 0 -z 0 -Y 0"/>
+        args="-urdf -param robot_description -model robot_0 -x 0 -y 0 -z 0 -Y 0"/>
 
   <!-- Spawn robot_1 at (0, 1). Re-process the xacro with robot_name:=robot_1. -->
   <param name="robot_description_1"
          command="xacro --inorder $(find nmpc_swarm_demo)/urdf/box_bot.urdf.xacro robot_name:=robot_1"/>
   <node pkg="gazebo_ros" type="spawn_model" name="spawn_robot_1" output="screen"
-        args="-param robot_description_1 -model robot_1 -x 0 -y 1 -z 0 -Y 0"/>
+        args="-urdf -param robot_description_1 -model robot_1 -x 0 -y 1 -z 0 -Y 0"/>
 
   <!-- Moving obstacles (publishes /moving_obstacles PoseArray) -->
   <node pkg="nmpc_swarm_demo" type="moving_obstacles.py" name="moving_obstacles"
