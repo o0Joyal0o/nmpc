@@ -94,10 +94,6 @@ Visualization Manager:
       Radius: 0.3
       Shape: Sphere
       Topic: /moving_obstacles
-    - Class: rviz/NavGoal
-      Enabled: true
-      Name: 2D Nav Goal
-      Topic: /move_base_simple/goal
   Enabled: true
   Name: Visualization Manager
   Notes: ''
