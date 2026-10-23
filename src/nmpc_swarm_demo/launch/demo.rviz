@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <rviz version="1.0">
   <Panel class="rviz/Displays" name="Displays">
-    <Property name="Fixed Frame" value="odom"/>
+    <Property name="Fixed Frame" value="map"/>
     <Property name="Name" value="Displays"/>
     <Property name="Enabled" value="true"/>
     <Display class="rviz/Grid" name="Grid">
@@ -20,15 +20,6 @@
       <Property name="Timeout" value="10"/>
       <Property name="Ignore Transformer Warnings" value="false"/>
       <Property name="Name" value="TF"/>
-      <Property name="Enabled" value="true"/>
-    </Display>
-    <Display class="rviz/RobotModel" name="RobotModel">
-      <Property name="Alpha" value="1"/>
-      <Property name="Robot Description" value="robot_description"/>
-      <Property name="TF Prefix" value=""/>
-      <Property name="Visual Enabled" value="true"/>
-      <Property name="Collision Enabled" value="false"/>
-      <Property name="Name" value="RobotModel"/>
       <Property name="Enabled" value="true"/>
     </Display>
     <Display class="rviz/Path" name="robot_0 path">
@@ -53,57 +44,5 @@
       <Property name="Name" value="Moving obstacles"/>
       <Property name="Enabled" value="true"/>
     </Display>
-    <Display class="rviz/NavGoal" name="2D Nav Goal">
-      <Property name="Topic" value="/move_base_simple/goal"/>
-      <Property name="Shape" value="Arrow"/>
-      <Property name="Color" value="255; 255; 0; 255"/>
-      <Property name="Radius" value="0.1"/>
-      <Property name="Name" value="2D Nav Goal"/>
-      <Property name="Enabled" value="true"/>
-    </Display>
   </Panel>
-  <Panel class="rviz/Views" name="Views">
-    <Property name="Name" value="Views"/>
-    <Property name="Current Goal" value="3D"/>
-    <View class="rviz/Orbit" name="Current View">
-      <Property name="Name" value="Current View"/>
-      <Property name="Distance" value="8"/>
-      <Property name="Focal Point X" value="0"/>
-      <Property name="Focal Point Y" value="0"/>
-      <Property name="Focal Point Z" value="0"/>
-      <Property name="Yaw" value="0"/>
-      <Property name="Pitch" value="0.7853981633974483"/>
-      <Property name="Target Frame" value=""/>
-      <Property name="Enable Stereo Rendering" value="false"/>
-      <Property name="Stereo Eye Separation" value="0.05"/>
-      <Property name="Stereo Focal Distance" value="1"/>
-      <Property name="Name" value="Current View"/>
-      <Property name="Enabled" value="true"/>
-    </View>
-  </Panel>
-  <Panel class="rviz/Tool Properties" name="Tool Properties">
-    <Property name="Name" value="Tool Properties"/>
-    <Property name="Enabled" value="true"/>
-  </Panel>
-  <Panel class="rviz/Time" name="Time">
-    <Property name="Name" value="Time"/>
-    <Property name="Enabled" value="true"/>
-  </Panel>
-  <Panel class="rviz/Selection" name="Selection">
-    <Property name="Name" value="Selection"/>
-    <Property name="Enabled" value="true"/>
-  </Panel>
-  <Panel class="rviz/Camera Capture" name="Camera Capture">
-    <Property name="Name" value="Camera Capture"/>
-    <Property name="Enabled" value="true"/>
-  </Panel>
-  <Panel class="rviz/Help" name="Help">
-    <Property name="Name" value="Help"/>
-    <Property name="Enabled" value="true"/>
-  </Panel>
-  <Property name="Save All On Exit" value="false"/>
-  <Property name="Default Topic" value=""/>
-  <Property name="Default Service" value=""/>
-  <Property name="Name" value=".rviz"/>
-  <Property name="Name" value="rviz"/>
 </rviz>
