@@ -8,6 +8,7 @@ Panels:
         - /Status1
         - /Grid1
         - /TF1
+        - /RobotModel1
         - /robot_0 path1
         - /robot_1 path1
         - /Moving obstacles1
@@ -73,6 +74,15 @@ Visualization Manager:
           robot_1/base_link:
       Update Interval: 0
       Value: true
+    - Class: rviz/RobotModel
+      Name: RobotModel
+      Robot Description: robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+      Alpha: 1
+      TF Prefix: ''
+      Value: true
+      Enabled: true
     - Class: rviz/Path
       Color: 0; 255; 0
       Enabled: true
@@ -95,6 +105,7 @@ Visualization Manager:
       Shape: Sphere
       Topic: /moving_obstacles
   Enabled: true
+  Fixed Frame: odom
   Name: Visualization Manager
   Notes: ''
   Status: []
