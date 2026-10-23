@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<rviz version="1.0">
+  <display name="Grid" class="rviz/Grid"/>
+  <display name="TF" class="rviz/TF"/>
+  <display name="2D Nav Goal" class="rviz/NavGoal"/>
+  <display name="RobotModel" class="rviz/RobotModel">
+    <update_interval>0.05</update_interval>
+    <value>
+      <name>robot_description</name>
+    </value>
+  </display>
+  <display name="robot_0 path" class="rviz/Path">
+    <topic>/robot_0/path</topic>
+    <color>0;1;0</color>   <!-- green -->
+  </display>
+  <display name="robot_1 path" class="rviz/Path">
+    <topic>/robot_1/path</topic>
+    <color>1;0;0</color>   <!-- red -->
+  </display>
+  <display name="Moving obstacles" class="rviz/PoseArray">
+    <topic>/moving_obstacles</topic>
+    <color>1;0.5;0</color> <!-- orange -->
+    <shape>sphere</shape>
+    <size>0.3</size>
+  </display>
+  <display name="laser scan" class="rviz/LaserScan"/>
+</rviz>
