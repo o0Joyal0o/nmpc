@@ -196,7 +196,13 @@ class CentralController:
             cost += self.w_theta * ca.sin(dtheta / 2.0) ** 2
 
             # CRUISE CONTROL: penalize NOT going at v_max (encourages forward motion)
-            cost += self.w_cruise * (self.v_max - uk[0]) ** 2
+            # SCALE DOWN near goal so robot can stop
+            dx_goal = xk[0] - p[3]
+            dy_goal = xk[1] - p[4]
+            dist2_goal = dx_goal * dx_goal + dy_goal * dy_goal + 1e-3
+            # Smooth scaling: full cruise at >2m, zero at goal
+            cruise_scale = ca.fmin(1.0, dist2_goal / (2.0 ** 2))
+            cost += self.w_cruise * cruise_scale * (self.v_max - uk[0]) ** 2
 
             # Small velocity regularization (prevents extreme speeds)
             cost += self.R_v * uk[0] ** 2

@@ -91,8 +91,8 @@
     <param name="w_avoid_robot" value="12.0"/>    <!-- inverse barrier: inter-robot -->
     <param name="odom_max_age" value="0.3"/>      <!-- fresher odom required -->
     <!-- Arrival detection: per-robot stop at goal -->
-    <param name="arrival_dist" value="0.15"/>       <!-- position tolerance [m] -->
-    <param name="arrival_angle" value="0.2"/>       <!-- heading tolerance [rad] -->
+    <param name="arrival_dist" value="0.25"/>       <!-- position tolerance [m] (increased from 0.15) -->
+    <param name="arrival_angle" value="0.35"/>       <!-- heading tolerance [rad] (increased from 0.2) -->
     <param name="arrival_hold_time" value="0.5"/>   <!-- hold time before declaring arrived [s] -->
   </node>
 
