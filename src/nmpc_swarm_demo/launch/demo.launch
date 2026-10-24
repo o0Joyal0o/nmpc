@@ -71,6 +71,29 @@
   <node pkg="nmpc_swarm_demo" type="central_controller.py" name="central_controller"
         output="screen">
     <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
+    <!-- Improved NMPC parameters: cruise control, inverse barriers, symmetry-breaking heading -->
+    <param name="dt" value="0.05"/>               <!-- finer discretization -->
+    <param name="horizon" value="20"/>            <!-- 1s horizon at 20Hz -->
+    <param name="ctrl_rate" value="20.0"/>        <!-- 20 Hz control loop -->
+    <param name="v_max" value="1.0"/>             <!-- 1 m/s max speed -->
+    <param name="v_min" value="-0.2"/>            <!-- slight reverse -->
+    <param name="w_max" value="2.0"/>             <!-- faster turning -->
+    <param name="formation_offset" value="0.5"/>  <!-- 0.5m lateral separation -->
+    <param name="d_min" value="0.6"/>             <!-- inter-robot 0.6m -->
+    <param name="d_obs_min" value="0.35"/>        <!-- obstacle 0.35m -->
+    <param name="w_pos" value="20.0"/>            <!-- position tracking -->
+    <param name="w_theta" value="5.0"/>           <!-- heading tracking (sin^2) -->
+    <param name="w_cruise" value="15.0"/>         <!-- cruise control: penalize not at v_max -->
+    <param name="R_v" value="0.05"/>              <!-- small velocity regularization -->
+    <param name="R_dv" value="0.3"/>              <!-- linear accel smoothness -->
+    <param name="R_domega" value="1.0"/>          <!-- angular accel smoothness -->
+    <param name="w_avoid" value="12.0"/>          <!-- inverse barrier: obstacles -->
+    <param name="w_avoid_robot" value="8.0"/>     <!-- inverse barrier: inter-robot -->
+    <param name="odom_max_age" value="0.5"/>      <!-- fresher odom required -->
+    <!-- Arrival detection: stop NMPC when at goal -->
+    <param name="arrival_dist" value="0.15"/>       <!-- position tolerance [m] -->
+    <param name="arrival_angle" value="0.2"/>       <!-- heading tolerance [rad] -->
+    <param name="arrival_hold_time" value="1.0"/>   <!-- hold time before declaring arrived [s] -->
   </node>
 
   <!-- RViz with pre-configured displays -->
