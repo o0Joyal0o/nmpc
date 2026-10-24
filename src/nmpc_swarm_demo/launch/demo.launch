@@ -59,7 +59,7 @@
     <param name="local_size_x" value="6.0"/>
     <param name="local_size_y" value="6.0"/>
     <param name="inflation_radius" value="0.25"/>
-    <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
+    <param name="static_obstacles" value="[[-2.5, 0.0], [2.5, 0.0], [0.0, 2.5], [0.0, -2.5]]"/>
   </node>
 
   <node pkg="nmpc_swarm_demo" type="simple_costmap.py" name="costmap_robot_1" output="screen">
@@ -70,13 +70,13 @@
     <param name="local_size_x" value="6.0"/>
     <param name="local_size_y" value="6.0"/>
     <param name="inflation_radius" value="0.25"/>
-    <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
+    <param name="static_obstacles" value="[[-2.5, 0.0], [2.5, 0.0], [0.0, 2.5], [0.0, -2.5]]"/>
   </node>
 
   <!-- Single central NMPC controller for both robots -->
   <node pkg="nmpc_swarm_demo" type="central_controller.py" name="central_controller"
         output="screen">
-    <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
+    <param name="static_obstacles" value="[[-2.5, 0.0], [2.5, 0.0], [0.0, 2.5], [0.0, -2.5]]"/>
     <!-- Improved NMPC parameters: cruise control, inverse barriers, symmetry-breaking heading -->
     <param name="dt" value="0.033"/>               <!-- 30 Hz discretization -->
     <param name="horizon" value="15"/>             <!-- 0.5s horizon at 30Hz -->

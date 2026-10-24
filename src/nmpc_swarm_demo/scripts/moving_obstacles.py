@@ -31,13 +31,23 @@ class MovingObstacles:
         self.obstacle_radius = rospy.get_param("~obstacle_radius", 0.25)
         self.obstacle_height = rospy.get_param("~obstacle_height", 0.5)
         self.obstacle_color = rospy.get_param("~obstacle_color", "1.0 0.5 0.0 1.0")  # orange
+        self.static_obstacle_color = rospy.get_param("~static_obstacle_color", "0.0 0.5 1.0 1.0")  # blue
 
-        # Each obstacle: name, start (x,y), end (x,y), speed (m/s)
-        # Moves back and forth: pos = start + (end-start) * triangle(t)
+        # Moving obstacles: name, start (x,y), end (x,y), speed (m/s)
+        # Spread out more to avoid congestion
         self.obstacles = [
-            dict(name="obstacle_0", start=(1.0, 0.0), end=(1.0, 2.0), speed=0.15),
-            dict(name="obstacle_1", start=(-1.0, 1.0), end=(1.0, 1.0), speed=0.12),
-            dict(name="obstacle_2", start=(0.0, -1.0), end=(2.0, -1.0), speed=0.10),
+            dict(name="moving_obs_0", start=(-3.0, -2.0), end=(-3.0, 2.0), speed=0.15),   # Left side vertical
+            dict(name="moving_obs_1", start=(3.0, -2.0), end=(3.0, 2.0), speed=0.12),    # Right side vertical
+            dict(name="moving_obs_2", start=(-2.0, 3.0), end=(2.0, 3.0), speed=0.10),    # Top horizontal
+            dict(name="moving_obs_3", start=(-2.0, -3.0), end=(2.0, -3.0), speed=0.12),  # Bottom horizontal
+        ]
+
+        # Static obstacles: name, position (x,y) - placed in Gazebo as static models
+        self.static_obstacles = [
+            dict(name="static_obs_0", pos=(-2.5, 0.0)),   # Left of center
+            dict(name="static_obs_1", pos=(2.5, 0.0)),    # Right of center
+            dict(name="static_obs_2", pos=(0.0, 2.5)),    # Above center
+            dict(name="static_obs_3", pos=(0.0, -2.5)),   # Below center
         ]
 
         # Per-obstacle progress in [0, 1] along start->end->start
@@ -55,10 +65,12 @@ class MovingObstacles:
         self.set_state_client = None
         self._wait_for_gazebo_services()
 
-        # ---- Spawn obstacles once ----
+        # ---- Spawn obstacles (both moving and static) ----
         self._spawn_obstacles()
+        self._spawn_static_obstacles()
 
-        rospy.loginfo("moving_obstacles: node ready with %d obstacles", len(self.obstacles))
+        rospy.loginfo("moving_obstacles: node ready with %d moving + %d static obstacles",
+                      len(self.obstacles), len(self.static_obstacles))
 
     # ------------------------------------------------------------------ #
     # Gazebo service handling
@@ -75,15 +87,16 @@ class MovingObstacles:
         except rospy.ROSException:
             rospy.logwarn("moving_obstacles: /gazebo/set_model_state not available")
 
-    def _sdf_cylinder(self, name, radius, height, color):
-        """Build an inline SDF for an orange cylinder obstacle."""
+    def _sdf_cylinder(self, name, radius, height, color, static=False):
+        """Build an inline SDF for a cylinder obstacle."""
         rgba = color.replace(" ", ",")
         r, g, b, a = [float(v) for v in rgba.split(",")]
+        static_str = "true" if static else "false"
         return (
             '<?xml version="1.0" ?>\n'
             '<sdf version="1.6">\n'
             '  <model name="%s">\n'
-            '    <static>false</static>\n'
+            '    <static>%s</static>\n'
             '    <link name="link">\n'
             '      <visual name="visual">\n'
             '        <geometry><cylinder><radius>%f</radius><length>%f</length></cylinder></geometry>\n'
@@ -95,7 +108,7 @@ class MovingObstacles:
             '    </link>\n'
             '  </model>\n'
             '</sdf>\n'
-        ) % (name, radius, height, r, g, b, a, r, g, b, a, radius, height)
+        ) % (name, static_str, radius, height, r, g, b, a, r, g, b, a, radius, height)
 
     def _spawn_obstacles(self):
         if self.spawn_client is None:
@@ -120,6 +133,30 @@ class MovingObstacles:
                 rospy.loginfo("moving_obstacles: spawned %s at (%.2f, %.2f)", obs["name"], start_x, start_y)
             except rospy.ServiceException as exc:
                 rospy.logerr("moving_obstacles: failed to spawn %s: %s", obs["name"], exc)
+
+    def _spawn_static_obstacles(self):
+        if self.spawn_client is None:
+            rospy.logwarn("moving_obstacles: spawn client unavailable, skipping static spawn")
+            return
+        for obs in self.static_obstacles:
+            # Static obstacles use <static>true</static> in SDF
+            sdf = self._sdf_cylinder(obs["name"], self.obstacle_radius, self.obstacle_height, self.static_obstacle_color, static=True)
+            pose = Pose()
+            pose.position.x = obs["pos"][0]
+            pose.position.y = obs["pos"][1]
+            pose.position.z = self.obstacle_height / 2.0
+            pose.orientation.w = 1.0
+            try:
+                self.spawn_client(
+                    model_name=obs["name"],
+                    model_xml=sdf,
+                    robot_namespace="",
+                    initial_pose=pose,
+                    reference_frame="world",
+                )
+                rospy.loginfo("moving_obstacles: spawned static %s at (%.2f, %.2f)", obs["name"], obs["pos"][0], obs["pos"][1])
+            except rospy.ServiceException as exc:
+                rospy.logerr("moving_obstacles: failed to spawn static %s: %s", obs["name"], exc)
 
     # ------------------------------------------------------------------ #
     # Motion update
