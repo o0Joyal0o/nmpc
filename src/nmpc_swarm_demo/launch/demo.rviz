@@ -124,6 +124,8 @@ Visualization Manager:
       Queue Size: 10
       Topic: /robot_0/robot_0/scan
       Value: true
+      Style: Lines
+      Line Width: 0.02
     - Class: rviz/LaserScan
       Alpha: 0.5
       Color: 255; 0; 255
@@ -132,6 +134,8 @@ Visualization Manager:
       Queue Size: 10
       Topic: /robot_1/robot_1/scan
       Value: true
+      Style: Lines
+      Line Width: 0.02
     - Class: rviz/Map
       Alpha: 0.7
       Color Scheme: costmap
