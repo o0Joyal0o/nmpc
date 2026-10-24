@@ -389,6 +389,15 @@ class CentralController:
         for i, name in enumerate(self.robots):
             sign = 1.0 if i == 0 else -1.0
             targets[name] = (gx + sign * off_x, gy + sign * off_y, gtheta)
+
+        # DEBUG: Log formation targets
+        rospy.loginfo_throttle(10.0, 
+            "FORMATION TARGETS: goal=(%.2f, %.2f, %.2f), offset=%.2f -> "
+            "robot_0=(%.2f, %.2f), robot_1=(%.2f, %.2f)",
+            gx, gy, gtheta, self.formation_offset,
+            targets["robot_0"][0], targets["robot_0"][1],
+            targets["robot_1"][0], targets["robot_1"][1])
+
         return targets
 
     # ------------------------------------------------------------------ #
@@ -417,12 +426,23 @@ class CentralController:
         in_coarse = dist < coarse_tol and angle_err < coarse_yaw
         is_stopped = speed < stopped_vel
 
+        # DEBUG: Log arrival state every 5 seconds
+        rospy.loginfo_throttle(5.0, 
+            "ARRIVAL CHECK %s: dist=%.3f (fine<%.2f, coarse<%.2f), "
+            "angle=%.3f (fine<%.2f, coarse<%.2f), speed=%.3f (stopped<%.2f), "
+            "in_fine=%s, in_coarse=%s, arrived=%s, hold_time=%.1f",
+            name, dist, fine_tol, coarse_tol, angle_err, fine_yaw, coarse_yaw, 
+            speed, stopped_vel, in_fine, in_coarse, self.robot_arrived[name],
+            (now - self.arrival_time[name]).to_sec() if self.arrival_time[name] else 0)
+
         now = rospy.Time.now()
 
         if self.robot_arrived[name]:
             # Already arrived: allow drift within coarse tolerance (hysteresis)
             if not in_coarse:
                 # Left arrival zone - reset
+                rospy.loginfo("ARRIVAL: %s LEFT coarse zone (dist=%.3f>%.2f or angle=%.3f>%.2f) - RESET", 
+                              name, dist, coarse_tol, angle_err, coarse_yaw)
                 self.robot_arrived[name] = False
                 self.arrival_time[name] = None
                 return False
@@ -432,13 +452,19 @@ class CentralController:
         if in_fine:
             if self.arrival_time[name] is None:
                 self.arrival_time[name] = now
+                rospy.loginfo("ARRIVAL: %s ENTERED fine zone (dist=%.3f, angle=%.3f) - START TIMER", name, dist, angle_err)
             elif (now - self.arrival_time[name]).to_sec() > self.arrival_hold_time:
                 # Held in fine zone long enough
                 if is_stopped or (now - self.arrival_time[name]).to_sec() > self.arrival_hold_time * 2:
+                    rospy.loginfo("ARRIVAL: %s ARRIVED! dist=%.3f, angle=%.3f, speed=%.3f, held=%.1fs", 
+                                  name, dist, angle_err, speed, 
+                                  (now - self.arrival_time[name]).to_sec())
                     self.robot_arrived[name] = True
                     return True
         else:
             # Left fine zone - reset timer
+            if self.arrival_time[name] is not None:
+                rospy.loginfo("ARRIVAL: %s LEFT fine zone (dist=%.3f or angle=%.3f) - RESET TIMER", name, dist, angle_err)
             self.arrival_time[name] = None
 
         return False
