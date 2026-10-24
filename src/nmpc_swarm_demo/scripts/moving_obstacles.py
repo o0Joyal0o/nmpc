@@ -132,7 +132,7 @@ class MovingObstacles:
 
     def update(self, dt):
         pose_array = PoseArray()
-        pose_array.header = Header(stamp=rospy.Time.now(), frame_id="world")
+        pose_array.header = Header(stamp=rospy.Time.now(), frame_id="odom")
 
         for obs in self.obstacles:
             name = obs["name"]

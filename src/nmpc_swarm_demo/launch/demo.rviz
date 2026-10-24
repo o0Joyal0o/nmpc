@@ -12,6 +12,8 @@ Panels:
         - /robot_0 path1
         - /robot_1 path1
         - /Moving obstacles1
+        - /robot_0 laser1
+        - /robot_1 laser1
         - /robot_0 local costmap1
         - /robot_1 local costmap1
       Splitter Ratio: 0.5394198894500732
@@ -115,6 +117,22 @@ Visualization Manager:
       Radius: 0.3
       Shape: Sphere
       Topic: /moving_obstacles
+    - Class: rviz/LaserScan
+      Alpha: 0.5
+      Color: 255; 255; 0
+      Enabled: true
+      Name: robot_0 laser
+      Queue Size: 10
+      Topic: /robot_0/robot_0/scan
+      Value: true
+    - Class: rviz/LaserScan
+      Alpha: 0.5
+      Color: 255; 0; 255
+      Enabled: true
+      Name: robot_1 laser
+      Queue Size: 10
+      Topic: /robot_1/robot_1/scan
+      Value: true
     - Class: rviz/Map
       Alpha: 0.7
       Color Scheme: costmap

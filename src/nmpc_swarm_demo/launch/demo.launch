@@ -25,6 +25,7 @@
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="rsp"
           output="screen">
       <param name="publish_frequency" value="30.0"/>
+      <param name="use_tf_static" value="true"/>
     </node>
   </group>
 
@@ -37,12 +38,17 @@
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="rsp"
           output="screen">
       <param name="publish_frequency" value="30.0"/>
+      <param name="use_tf_static" value="true"/>
     </node>
   </group>
 
   <!-- Moving obstacles (publishes /moving_obstacles PoseArray) -->
   <node pkg="nmpc_swarm_demo" type="moving_obstacles.py" name="moving_obstacles"
         output="screen"/>
+
+  <!-- Static transform: world -> odom (identity, since Gazebo diff_drive with odometrySource=1 aligns odom with world) -->
+  <node pkg="tf" type="static_transform_publisher" name="world_to_odom"
+        args="0 0 0 0 0 0 world odom 100"/>
 
   <!-- Costmaps for each robot (global + local) -->
   <node pkg="nmpc_swarm_demo" type="simple_costmap.py" name="costmap_robot_0" output="screen">
