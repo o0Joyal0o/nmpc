@@ -15,7 +15,6 @@ Panels:
         - /robot_0 laser1
         - /robot_1 laser1
         - /robot_0 local costmap1
-        - /robot_1 local costmap1
       Splitter Ratio: 0.5394198894500732
   - Class: rviz/Selection
     Name: Selection
@@ -141,9 +140,9 @@ Visualization Manager:
       Topic: /robot_0/local_costmap
       Value: true
     - Class: rviz/Map
-      Alpha: 0.7
+      Alpha: 0.5
       Color Scheme: costmap
-      Enabled: true
+      Enabled: false
       Name: robot_1 local costmap
       Topic: /robot_1/local_costmap
       Value: true

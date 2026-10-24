@@ -58,7 +58,7 @@
     <param name="global_size_y" value="20.0"/>
     <param name="local_size_x" value="6.0"/>
     <param name="local_size_y" value="6.0"/>
-    <param name="inflation_radius" value="0.4"/>
+    <param name="inflation_radius" value="0.25"/>
     <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
   </node>
 
@@ -69,7 +69,7 @@
     <param name="global_size_y" value="20.0"/>
     <param name="local_size_x" value="6.0"/>
     <param name="local_size_y" value="6.0"/>
-    <param name="inflation_radius" value="0.4"/>
+    <param name="inflation_radius" value="0.25"/>
     <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
   </node>
 
