@@ -5,11 +5,6 @@
     box_bot differential-drive robots (robot_0 at (0,0), robot_1 at (0,1)),
     starts the moving obstacles node and the single central NMPC controller,
     and opens RViz with pre-configured displays.
-
-    Design notes (kept minimal for a college PBL demo):
-      * No ROS namespaces (no ns="..." tags or remapping groups).
-      * Robot topics are explicit: /robot_0/cmd_vel, /robot_0/odom, ...
-      * ONE central controller node handles both robots in a `for` loop.
   -->
 
   <!-- Gazebo Classic with an empty ground plane -->
@@ -21,31 +16,62 @@
     <arg name="debug" value="false"/>
   </include>
 
-  <!-- Robot description (xacro) for robot_0; used by robot_state_publisher for RViz -->
-  <param name="robot_description"
-         command="xacro --inorder $(find nmpc_swarm_demo)/urdf/box_bot.urdf.xacro robot_name:=robot_0"/>
+  <!-- Robot 0: spawn with namespace robot_0 -->
+  <group ns="robot_0">
+    <param name="robot_description"
+           command="$(find xacro)/xacro $(find nmpc_swarm_demo)/urdf/box_bot.urdf.xacro prefix:=robot_0/"/>
+    <node pkg="nmpc_swarm_demo" type="spawn_robot.sh" name="spawn" output="screen"
+          args="robot_0 robot_description 0 0 0 0"/>
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="rsp"
+          output="screen">
+      <param name="publish_frequency" value="30.0"/>
+    </node>
+  </group>
 
-  <!-- Publish the robot model TF so RViz can render robot_0's box_bot model -->
-  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"
-        output="screen"/>
-
-  <!-- Spawn robot_0 at (0, 0) -->
-  <node pkg="gazebo_ros" type="spawn_model" name="spawn_robot_0" output="screen"
-        args="-urdf -param robot_description -model robot_0 -x 0 -y 0 -z 0 -Y 0"/>
-
-  <!-- Spawn robot_1 at (0, 1). Re-process the xacro with robot_name:=robot_1. -->
-  <param name="robot_description_1"
-         command="xacro --inorder $(find nmpc_swarm_demo)/urdf/box_bot.urdf.xacro robot_name:=robot_1"/>
-  <node pkg="gazebo_ros" type="spawn_model" name="spawn_robot_1" output="screen"
-        args="-urdf -param robot_description_1 -model robot_1 -x 0 -y 1 -z 0 -Y 0"/>
+  <!-- Robot 1: spawn with namespace robot_1 -->
+  <group ns="robot_1">
+    <param name="robot_description"
+           command="$(find xacro)/xacro $(find nmpc_swarm_demo)/urdf/box_bot.urdf.xacro prefix:=robot_1/"/>
+    <node pkg="nmpc_swarm_demo" type="spawn_robot.sh" name="spawn" output="screen"
+          args="robot_1 robot_description 0 1 0 0"/>
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="rsp"
+          output="screen">
+      <param name="publish_frequency" value="30.0"/>
+    </node>
+  </group>
 
   <!-- Moving obstacles (publishes /moving_obstacles PoseArray) -->
   <node pkg="nmpc_swarm_demo" type="moving_obstacles.py" name="moving_obstacles"
         output="screen"/>
 
+  <!-- Costmaps for each robot (global + local) -->
+  <node pkg="nmpc_swarm_demo" type="simple_costmap.py" name="costmap_robot_0" output="screen">
+    <param name="robot_name" value="robot_0"/>
+    <param name="resolution" value="0.05"/>
+    <param name="global_size_x" value="20.0"/>
+    <param name="global_size_y" value="20.0"/>
+    <param name="local_size_x" value="6.0"/>
+    <param name="local_size_y" value="6.0"/>
+    <param name="inflation_radius" value="0.4"/>
+    <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
+  </node>
+
+  <node pkg="nmpc_swarm_demo" type="simple_costmap.py" name="costmap_robot_1" output="screen">
+    <param name="robot_name" value="robot_1"/>
+    <param name="resolution" value="0.05"/>
+    <param name="global_size_x" value="20.0"/>
+    <param name="global_size_y" value="20.0"/>
+    <param name="local_size_x" value="6.0"/>
+    <param name="local_size_y" value="6.0"/>
+    <param name="inflation_radius" value="0.4"/>
+    <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
+  </node>
+
   <!-- Single central NMPC controller for both robots -->
   <node pkg="nmpc_swarm_demo" type="central_controller.py" name="central_controller"
-        output="screen"/>
+        output="screen">
+    <param name="static_obstacles" value="[[1.5, 0.5], [-1.0, -1.0]]"/>
+  </node>
 
   <!-- RViz with pre-configured displays -->
   <node pkg="rviz" type="rviz" name="rviz" output="screen"

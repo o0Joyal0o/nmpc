@@ -12,7 +12,9 @@ Panels:
         - /robot_0 path1
         - /robot_1 path1
         - /Moving obstacles1
-    Splitter Ratio: 0.5394198894500732
+        - /robot_0 local costmap1
+        - /robot_1 local costmap1
+      Splitter Ratio: 0.5394198894500732
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -76,11 +78,20 @@ Visualization Manager:
       Value: true
     - Class: rviz/RobotModel
       Name: RobotModel
-      Robot Description: robot_description
+      Robot Description: robot_0/robot_description
       Visual Enabled: true
       Collision Enabled: false
       Alpha: 1
-      TF Prefix: ''
+      TF Prefix: robot_0
+      Value: true
+      Enabled: true
+    - Class: rviz/RobotModel
+      Name: RobotModel 2
+      Robot Description: robot_1/robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+      Alpha: 1
+      TF Prefix: robot_1
       Value: true
       Enabled: true
     - Class: rviz/Path
@@ -104,13 +115,84 @@ Visualization Manager:
       Radius: 0.3
       Shape: Sphere
       Topic: /moving_obstacles
+    - Class: rviz/Map
+      Alpha: 0.7
+      Color Scheme: costmap
+      Enabled: true
+      Name: robot_0 local costmap
+      Topic: /robot_0/local_costmap
+      Value: true
+    - Class: rviz/Map
+      Alpha: 0.7
+      Color Scheme: costmap
+      Enabled: true
+      Name: robot_1 local costmap
+      Topic: /robot_1/local_costmap
+      Value: true
+    - Class: rviz/Map
+      Alpha: 0.5
+      Color Scheme: costmap
+      Enabled: false
+      Name: robot_0 global costmap
+      Topic: /robot_0/global_costmap
+      Value: true
+    - Class: rviz/Map
+      Alpha: 0.5
+      Color Scheme: costmap
+      Enabled: false
+      Name: robot_1 global costmap
+      Topic: /robot_1/global_costmap
+      Value: true
   Enabled: true
   Fixed Frame: odom
   Name: Visualization Manager
   Notes: ''
   Status: []
   Tree: ''
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: false
+    - Class: rviz/MoveCamera
+      Hide Inactive Objects: false
+    - Class: rviz/Select
+      Hide Inactive Objects: false
+    - Class: rviz/FocusCamera
+      Hide Inactive Objects: false
+    - Class: rviz/Measure
+      Hide Inactive Objects: false
+    - Class: rviz/SetInitialPose
+      Topic: /initialpose
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+  Value: true
+  Views:
+    Current:
+      Class: rviz/XYOrbit
+      Distance: 12
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.06
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05
+      Name: Current View
+      Near Clip Distance: 0.01
+      Pitch: 1.2
+      Target Frame: <Fixed Frame>
+      Value: XYOrbit (rviz/XYOrbit)
+      Yaw: 0
+    Saved: ~
 Background Color: 48; 48; 48
 Default Grid: rviz/Grid
 Background Color: 48; 48; 48
 Default Grid: rviz/Grid
+Window Geometry:
+  Height: 768
+  Width: 1024
+  X: 0
+  Y: 0

@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 catkin_package()
@@ -20,6 +22,8 @@ include_directories(
 install(PROGRAMS
   scripts/central_controller.py
   scripts/moving_obstacles.py
+  scripts/simple_costmap.py
+  scripts/spawn_robot.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

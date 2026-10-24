@@ -36,7 +36,7 @@ import rospy
 import casadi as ca
 import numpy as np
 from geometry_msgs.msg import Twist, PoseStamped, PoseArray, Pose
-from nav_msgs.msg import Odometry, Path
+from nav_msgs.msg import Odometry, Path, OccupancyGrid
 from std_msgs.msg import Header
 
 
@@ -76,6 +76,16 @@ class CentralController:
         self.d_min = rospy.get_param("~d_min", 0.5)      # inter-robot min distance
         self.d_obs_min = rospy.get_param("~d_obs_min", 0.45)  # robot-obstacle min distance
 
+        # static obstacle positions (from launch parameters, may be string from ROS param)
+        raw = rospy.get_param("~static_obstacles", [[1.5, 0.5], [-1.0, -1.0]])
+        if isinstance(raw, str):
+            import json
+            try:
+                raw = json.loads(raw)
+            except Exception:
+                raw = [[1.5, 0.5], [-1.0, -1.0]]
+        self.static_obstacles = [list(o) for o in raw]
+
         # cost weights
         self.w_pos = rospy.get_param("~w_pos", 10.0)
         self.w_theta = rospy.get_param("~w_theta", 1.0)
@@ -97,6 +107,10 @@ class CentralController:
         self.goal_time = None
         self.obstacles = []       # list of (x, y)
 
+        # Costmap data for each robot (for visualization/monitoring only)
+        self.local_costmaps = {name: None for name in self.robots}
+        self.costmap_info = {name: None for name in self.robots}
+
         # -------------------- pubs / subs --------------------
         self.cmd_pubs = {}
         self.path_pubs = {}
@@ -105,6 +119,9 @@ class CentralController:
             self.cmd_pubs[name] = rospy.Publisher("/%s/cmd_vel" % name, Twist, queue_size=10)
             self.path_pubs[name] = rospy.Publisher("/%s/path" % name, Path, queue_size=10)
             self.paths[name].header.frame_id = "odom"
+            # Subscribe to local costmap (for monitoring only)
+            rospy.Subscriber("/%s/local_costmap" % name, OccupancyGrid,
+                             self._costmap_cb, callback_args=name, queue_size=10)
 
         rospy.Subscriber("/move_base_simple/goal", PoseStamped, self._goal_cb, queue_size=10)
         rospy.Subscriber("/moving_obstacles", PoseArray, self._obstacles_cb, queue_size=10)
@@ -226,9 +243,18 @@ class CentralController:
 
         rospy.loginfo("central_controller: CasADi/IPOPT NMPC ready (horizon=%d, dt=%.2f)", N, dt)
 
+        self.n_z = n_z
+        self.n_u = n_u
+        self.n_g = len(lbg)
+        self.lbg = lbg
+        self.ubg = ubg
+
+        rospy.loginfo("central_controller: CasADi/IPOPT NMPC ready (horizon=%d, dt=%.2f)", N, dt)
+
     def _n_obs_max(self):
-        # Fixed max obstacles to keep parameter vector size constant
-        return 3
+        # Fixed max obstacles to keep parameter vector size constant:
+        # moving (up to 3) + static obstacles
+        return 3 + len(self.static_obstacles)
 
     # ------------------------------------------------------------------ #
     # Callbacks
@@ -241,6 +267,11 @@ class CentralController:
 
     def _obstacles_cb(self, msg):
         self.obstacles = [(pose.position.x, pose.position.y) for pose in msg.poses]
+
+    def _costmap_cb(self, msg, name):
+        """Store local costmap for a robot."""
+        self.local_costmaps[name] = np.array(msg.data, dtype=np.int16).reshape((msg.info.height, msg.info.width))
+        self.costmap_info[name] = msg.info
 
     def _odom_cb(self, msg, name):
         st = self.states[name]
@@ -309,14 +340,21 @@ class CentralController:
         p[6] = ost.x if ost.ready else st.x
         p[7] = ost.y if ost.ready else st.y
 
-        # Obstacles (pad with far-away values if fewer than max)
-        for i in range(n_obs_max):
+        # Obstacles: moving obstacles first, then static obstacles (padded with far-away values)
+        obs_idx = 8
+        for i in range(self._n_obs_max()):
             if i < len(self.obstacles):
-                p[8 + 2 * i] = self.obstacles[i][0]
-                p[9 + 2 * i] = self.obstacles[i][1]
+                # Moving obstacle
+                p[obs_idx + 2 * i] = self.obstacles[i][0]
+                p[obs_idx + 2 * i + 1] = self.obstacles[i][1]
+            elif i - len(self.obstacles) < len(self.static_obstacles):
+                # Static obstacle
+                so = self.static_obstacles[i - len(self.obstacles)]
+                p[obs_idx + 2 * i] = so[0]
+                p[obs_idx + 2 * i + 1] = so[1]
             else:
-                p[8 + 2 * i] = 1e3
-                p[9 + 2 * i] = 1e3
+                p[obs_idx + 2 * i] = 1e3
+                p[obs_idx + 2 * i + 1] = 1e3
 
         # Initial guess: hold previous control, propagate state
         x0 = np.zeros(self.n_z)
@@ -371,14 +409,15 @@ class CentralController:
         path.header = Header(stamp=rospy.Time.now(), frame_id="odom")
         N = self.horizon
         for k in range(N + 1):
-            pose = Pose()
-            pose.position.x = float(sol_x[3 * k + 0])
-            pose.position.y = float(sol_x[3 * k + 1])
-            pose.position.z = 0.0
+            pose = PoseStamped()
+            pose.header = Header(stamp=rospy.Time.now(), frame_id="odom")
+            pose.pose.position.x = float(sol_x[3 * k + 0])
+            pose.pose.position.y = float(sol_x[3 * k + 1])
+            pose.pose.position.z = 0.0
             # yaw as quaternion (z-only)
             yaw = float(sol_x[3 * k + 2])
-            pose.orientation.z = math.sin(yaw / 2.0)
-            pose.orientation.w = math.cos(yaw / 2.0)
+            pose.pose.orientation.z = math.sin(yaw / 2.0)
+            pose.pose.orientation.w = math.cos(yaw / 2.0)
             path.poses.append(pose)
         self.path_pubs[name].publish(path)
 
@@ -388,25 +427,39 @@ class CentralController:
     def run(self):
         rate = rospy.Rate(self.ctrl_rate)
         while not rospy.is_shutdown():
-            targets = self._formation_targets()
+            try:
+                targets = self._formation_targets()
 
-            for name in self.robots:
-                twist = Twist()  # default: zeros (safe fallback)
-                sol_x = None
+                for name in self.robots:
+                    twist = Twist()  # default: zeros (safe fallback)
+                    sol_x = None
 
-                if self.goal is not None and name in targets:
-                    res = self._solve_robot(name, targets[name])
-                    if res is not None:
-                        v, omega, sol_x = res
-                        twist.linear.x = v
-                        twist.angular.z = omega
-                        self._publish_path(name, sol_x)
+                    if self.goal is not None and name in targets:
+                        try:
+                            res = self._solve_robot(name, targets[name])
+                        except Exception as exc:
+                            rospy.logerr("central_controller: solver exception for %s: %s", name, exc)
+                            res = None
+                        if res is not None:
+                            v, omega, sol_x = res
+                            twist.linear.x = v
+                            twist.angular.z = omega
+                            try:
+                                self._publish_path(name, sol_x)
+                            except Exception as exc:
+                                rospy.logerr("central_controller: path publish error for %s: %s", name, exc)
+                        else:
+                            rospy.loginfo_throttle(5.0, "central_controller: fallback zero cmd for %s", name)
                     else:
-                        rospy.logdebug("central_controller: fallback zero cmd for %s", name)
-                else:
-                    rospy.logdebug("central_controller: no goal/target for %s", name)
+                        rospy.loginfo_throttle(5.0, "central_controller: waiting for goal for %s", name)
 
-                self.cmd_pubs[name].publish(twist)
+                    try:
+                        self.cmd_pubs[name].publish(twist)
+                    except Exception as exc:
+                        rospy.logerr("central_controller: cmd_vel publish error for %s: %s", name, exc)
+
+            except Exception as exc:
+                rospy.logerr("central_controller: main loop error: %s", exc)
 
             rate.sleep()
 
