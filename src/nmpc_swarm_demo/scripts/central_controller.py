@@ -116,6 +116,7 @@ class CentralController:
         self.goal_time = None
         self.obstacles = []       # list of (x, y)
         self.arrival_time = {name: None for name in self.robots}  # when each robot arrived
+        self.both_arrived = False  # global flag: both robots at goal
 
         # Costmap data for each robot (for visualization/monitoring only)
         self.local_costmaps = {name: None for name in self.robots}
@@ -358,6 +359,15 @@ class CentralController:
             self.arrival_time[name] = None
         return False
 
+    def _check_both_arrived(self, targets):
+        """Check if both robots have arrived at their targets."""
+        for name in self.robots:
+            if name not in targets:
+                return False
+            if not self._check_arrival(name, targets[name]):
+                return False
+        return True
+
     @staticmethod
     def _normalize_angle(angle):
         """Normalize angle to [-pi, pi]."""
@@ -515,6 +525,19 @@ class CentralController:
             try:
                 targets = self._formation_targets()
 
+                # Check if both robots have arrived (global condition)
+                both_arrived_now = self._check_both_arrived(targets) if self.goal is not None else False
+
+                # Reset both_arrived flag when new goal received
+                if both_arrived_now and not self.both_arrived:
+                    self.both_arrived = True
+                    rospy.loginfo("central_controller: BOTH robots ARRIVED at goal")
+                elif not both_arrived_now and self.both_arrived:
+                    # New goal or robots moved away
+                    self.both_arrived = False
+                    for name in self.robots:
+                        self.arrival_time[name] = None
+
                 for name in self.robots:
                     twist = Twist()  # default: zeros (safe fallback)
                     sol_x = None
@@ -522,9 +545,9 @@ class CentralController:
                     if self.goal is not None and name in targets:
                         target = targets[name]
 
-                        # Check arrival: if arrived, hold position (zero cmd)
-                        if self._check_arrival(name, target):
-                            rospy.loginfo_throttle(5.0, "central_controller: %s ARRIVED at goal", name)
+                        # If both arrived, hold position (zero cmd) for BOTH robots
+                        if self.both_arrived:
+                            rospy.loginfo_throttle(5.0, "central_controller: %s HOLDING at goal (both arrived)", name)
                             # twist stays zero
                         else:
                             try:

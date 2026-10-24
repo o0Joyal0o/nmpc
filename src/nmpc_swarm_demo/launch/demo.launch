@@ -76,7 +76,7 @@
     <param name="horizon" value="20"/>            <!-- 1s horizon at 20Hz -->
     <param name="ctrl_rate" value="20.0"/>        <!-- 20 Hz control loop -->
     <param name="v_max" value="1.0"/>             <!-- 1 m/s max speed -->
-    <param name="v_min" value="-0.2"/>            <!-- slight reverse -->
+    <param name="v_min" value="-0.8"/>            <!-- reverse speed almost same as forward -->
     <param name="w_max" value="2.0"/>             <!-- faster turning -->
     <param name="formation_offset" value="0.5"/>  <!-- 0.5m lateral separation -->
     <param name="d_min" value="0.6"/>             <!-- inter-robot 0.6m -->
