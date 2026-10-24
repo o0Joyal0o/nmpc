@@ -161,7 +161,7 @@ Visualization Manager:
       Topic: /robot_1/global_costmap
       Value: true
   Enabled: true
-  Fixed Frame: odom
+  Fixed Frame: map
   Name: Visualization Manager
   Notes: ''
   Status: []
