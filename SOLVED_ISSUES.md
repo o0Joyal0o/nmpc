@@ -101,21 +101,19 @@ This document tracks all issues solved in the NMPC Swarm Demo project. **Do not 
 
 ---
 
-## Issue 9: Obstacle Avoidance Not Working At All
+## Issue 10: Robot Not Stopping at Goal (Cruise Control Prevents Stopping)
 **Date:** 2026-10-24
 **Status:** FIXED
-**Root Causes:**
-1. Inverse barrier formula normalized by `d_obs_min`: `w / (dist²/d_min² + ε)` - makes barrier weak at distances > d_min
-2. Weight `w_avoid=15` too low for pure inverse barrier
-3. Obstacle velocity estimation used wrong time delta (control dt vs actual message dt)
-4. Warning radius `d_obs_min=0.35` too small for robot size
+**Root Cause:** Cruise control `w_cruise * (v_max - v)²` forces robot to maintain max speed (1 m/s) even at goal position. Robot overshoots, turns around, comes back, overshoots again - never slowing down enough to trigger arrival detection.
+
+**Symptoms from logs:**
+- `dist=0.22→0.9` but `in_fine=False` always
+- `speed=1.0-2.6 m/s` near goal (cruise control forcing max speed)
+- `angle=2.9 rad` (180° wrong) - robot spins/overshoots
 
 **Fix:**
-- Changed to **pure inverse distance squared**: `w / (dist² + ε)` (like MPC_turtlebot)
-- Increased `w_avoid`: 15 → **50** (effective at larger distances)
-- Increased `w_avoid_robot`: 8 → **12** (consistent formula)
-- Increased `d_obs_min`: 0.35 → **0.5m** (larger warning radius)
-- Fixed velocity estimation: use actual message time delta, not control dt
-- Added debug logging for obstacle positions/velocities
+1. **Distance-scaled cruise control**: `cruise_scale = min(1.0, dist²_goal / 4.0)` - full cruise at >2m, zero at goal
+2. **Increased arrival tolerances**: `arrival_dist: 0.15→0.25m`, `arrival_angle: 0.2→0.35 rad`
+3. Added comprehensive debug logging to diagnose future issues
 
 **Files:** `central_controller.py`, `demo.launch`

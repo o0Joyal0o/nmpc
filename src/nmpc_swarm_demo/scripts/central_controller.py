@@ -432,6 +432,8 @@ class CentralController:
         in_coarse = dist < coarse_tol and angle_err < coarse_yaw
         is_stopped = speed < stopped_vel
 
+        now = rospy.Time.now()
+
         # DEBUG: Log arrival state every 5 seconds
         rospy.loginfo_throttle(5.0, 
             "ARRIVAL CHECK %s: dist=%.3f (fine<%.2f, coarse<%.2f), "
@@ -440,8 +442,6 @@ class CentralController:
             name, dist, fine_tol, coarse_tol, angle_err, fine_yaw, coarse_yaw, 
             speed, stopped_vel, in_fine, in_coarse, self.robot_arrived[name],
             (now - self.arrival_time[name]).to_sec() if self.arrival_time[name] else 0)
-
-        now = rospy.Time.now()
 
         if self.robot_arrived[name]:
             # Already arrived: allow drift within coarse tolerance (hysteresis)
