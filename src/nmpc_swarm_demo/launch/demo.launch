@@ -80,15 +80,15 @@
     <param name="w_max" value="2.5"/>             <!-- faster turning -->
     <param name="formation_offset" value="0.5"/>  <!-- 0.5m lateral separation -->
     <param name="d_min" value="0.6"/>             <!-- inter-robot 0.6m -->
-    <param name="d_obs_min" value="0.35"/>        <!-- obstacle 0.35m -->
+    <param name="d_obs_min" value="0.5"/>        <!-- obstacle warning radius 0.5m (was 0.35) -->
     <param name="w_pos" value="20.0"/>            <!-- position tracking -->
     <param name="w_theta" value="5.0"/>           <!-- heading tracking (sin^2) -->
     <param name="w_cruise" value="15.0"/>         <!-- cruise control: penalize not at v_max -->
     <param name="R_v" value="0.05"/>              <!-- small velocity regularization -->
     <param name="R_dv" value="0.3"/>              <!-- linear accel smoothness -->
     <param name="R_domega" value="1.0"/>          <!-- angular accel smoothness -->
-    <param name="w_avoid" value="15.0"/>          <!-- inverse barrier: obstacles (higher for fast) -->
-    <param name="w_avoid_robot" value="8.0"/>     <!-- inverse barrier: inter-robot -->
+    <param name="w_avoid" value="50.0"/>          <!-- inverse barrier: obstacles (MUCH higher for pure inverse) -->
+    <param name="w_avoid_robot" value="12.0"/>    <!-- inverse barrier: inter-robot -->
     <param name="odom_max_age" value="0.3"/>      <!-- fresher odom required -->
     <!-- Arrival detection: per-robot stop at goal -->
     <param name="arrival_dist" value="0.15"/>       <!-- position tolerance [m] -->

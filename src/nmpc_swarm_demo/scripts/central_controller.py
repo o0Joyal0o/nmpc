@@ -206,13 +206,13 @@ class CentralController:
                 cost += self.R_dv * (uk[0] - u[0, k - 1]) ** 2
                 cost += self.R_domega * (uk[1] - u[1, k - 1]) ** 2
 
-            # Inter-robot INVERSE BARRIER avoidance
+            # Inter-robot INVERSE BARRIER avoidance (pure inverse distance squared)
             dx_o = xk[0] - p[6]
             dy_o = xk[1] - p[7]
             dist2_o = dx_o * dx_o + dy_o * dy_o + 1e-3
-            cost += self.w_avoid_robot / (dist2_o / (self.d_min ** 2) + 1e-3)
+            cost += self.w_avoid_robot / dist2_o
 
-            # Obstacle avoidance with PREDICTED positions
+            # Obstacle avoidance with PREDICTED positions - PURE INVERSE BARRIER (like MPC_turtlebot)
             for i in range(self._n_obs_max()):
                 # Current obstacle position
                 ox_curr = p[8 + 2 * i]
@@ -228,10 +228,11 @@ class CentralController:
                 dy = xk[1] - oy_pred
                 dist2 = dx * dx + dy * dy + 1e-3
                 
-                # HARDER avoidance: inverse barrier with higher weight for predicted collision
-                # Use time-varying weight - higher for near-term predictions
-                time_weight = 1.0 + (N - k) * 0.1  # earlier steps = higher weight
-                cost += self.w_avoid * time_weight / (dist2 / (self.d_obs_min ** 2) + 1e-3)
+                # Pure inverse barrier: W / (dist^2 + eps)
+                # Strong repulsion at ALL distances, ramps to infinity at contact
+                # Time-varying weight - higher for near-term predictions
+                time_weight = 1.0 + (N - k) * 0.15  # earlier steps = higher weight
+                cost += self.w_avoid * time_weight / dist2
 
         # Terminal cost - stronger to ensure convergence at horizon end
         xN = z[:, N]
@@ -300,7 +301,11 @@ class CentralController:
 
     def _obstacles_cb(self, msg):
         now = rospy.Time.now()
-        dt = self.dt if not hasattr(self, 'last_obs_time') else (now - self.last_obs_time).to_sec()
+        # Use actual time delta between messages, not control dt
+        if hasattr(self, 'last_obs_time'):
+            dt = (now - self.last_obs_time).to_sec()
+        else:
+            dt = 0.05  # default 20Hz
         
         # Store positions and estimate velocities by index (moving_obstacles publishes fixed order)
         new_positions = []
@@ -329,6 +334,16 @@ class CentralController:
         
         self.obstacles = new_positions
         self.last_obs_time = now
+        
+        # Debug: log obstacle positions and velocities occasionally
+        if hasattr(self, '_obs_debug_counter'):
+            self._obs_debug_counter += 1
+        else:
+            self._obs_debug_counter = 0
+        if self._obs_debug_counter % 100 == 0 and self.obstacles:
+            rospy.loginfo_throttle(5.0, "central_controller: obstacles=%s, vels=%s", 
+                                   [(round(x,2), round(y,2)) for x,y in self.obstacles],
+                                   [(round(vx,2), round(vy,2)) for vx,vy in self.obstacle_vels])
 
     def _costmap_cb(self, msg, name):
         """Store local costmap for a robot."""
