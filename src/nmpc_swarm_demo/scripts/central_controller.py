@@ -115,8 +115,9 @@ class CentralController:
         self.goal = None          # PoseStamped from RViz
         self.goal_time = None
         self.obstacles = []       # list of (x, y)
-        self.arrival_time = {name: None for name in self.robots}  # when each robot arrived
-        self.both_arrived = False  # global flag: both robots at goal
+        self.obstacle_vels = {}     # name -> (vx, vy) estimated velocity
+        self.arrival_time = {name: None for name in self.robots}
+        self.robot_arrived = {name: False for name in self.robots}  # per-robot arrival flag
 
         # Costmap data for each robot (for visualization/monitoring only)
         self.local_costmaps = {name: None for name in self.robots}
@@ -142,7 +143,7 @@ class CentralController:
 
         rospy.loginfo("central_controller: NMPC solver built for robots %s", self.robots)
 
-    # ------------------------------------------------------------------ #
+# ------------------------------------------------------------------ #
     # CasADi NMPC solver (built once, reused every cycle)
     # ------------------------------------------------------------------ #
     def _build_nmpc_solver(self):
@@ -153,14 +154,16 @@ class CentralController:
         z = ca.SX.sym("z", 3, N + 1)   # [x, y, theta] per step
         u = ca.SX.sym("u", 2, N)       # [v, omega] per step
         n_obs_max = self._n_obs_max()
-        p = ca.SX.sym("p", 8 + 2 * n_obs_max)  # parameter vector
+        # Param layout: state(3) + target(2) + theta(1) + other(2) + obs_pos(2*n) + obs_vel(2*n)
+        p = ca.SX.sym("p", 8 + 4 * n_obs_max)  # parameter vector
 
         # Parameter layout (fixed size):
-        #   p[0:3]   = current state [x0, y0, theta0]
-        #   p[3:5]   = target [tx, ty]
-        #   p[5]     = target heading
-        #   p[6:8]   = other robot current [ox, oy] (for inter-robot avoidance)
-        #   p[8:]    = obstacle positions, 2 each (up to n_obs_max)
+        #   p[0:3]       = current state [x0, y0, theta0]
+        #   p[3:5]       = target [tx, ty]
+        #   p[5]         = target heading
+        #   p[6:8]       = other robot current [ox, oy] (for inter-robot avoidance)
+        #   p[8:8+2*n]   = obstacle current positions, 2 each
+        #   p[8+2*n:]    = obstacle velocities, 2 each
 
         cost = 0
         g = []          # constraints
@@ -189,13 +192,10 @@ class CentralController:
             cost += self.w_pos * ((xk[0] - p[3]) ** 2 + (xk[1] - p[4]) ** 2)
 
             # Heading cost: sin^2(Δθ/2) = (1 - cos(Δθ))/2
-            # This breaks left/right symmetry better than 1-cos(Δθ) for large angles
-            # and has gradient pointing toward shortest rotation
             dtheta = xk[2] - p[5]
             cost += self.w_theta * ca.sin(dtheta / 2.0) ** 2
 
             # CRUISE CONTROL: penalize NOT going at v_max (encourages forward motion)
-            # This prevents the robot from freezing at obstacles
             cost += self.w_cruise * (self.v_max - uk[0]) ** 2
 
             # Small velocity regularization (prevents extreme speeds)
@@ -207,29 +207,40 @@ class CentralController:
                 cost += self.R_domega * (uk[1] - u[1, k - 1]) ** 2
 
             # Inter-robot INVERSE BARRIER avoidance
-            # Stronger repulsion as distance decreases, never saturates
             dx_o = xk[0] - p[6]
             dy_o = xk[1] - p[7]
             dist2_o = dx_o * dx_o + dy_o * dy_o + 1e-3
             cost += self.w_avoid_robot / (dist2_o / (self.d_min ** 2) + 1e-3)
 
-            # Obstacle INVERSE BARRIER avoidance (moving + static)
+            # Obstacle avoidance with PREDICTED positions
             for i in range(self._n_obs_max()):
-                ox = p[8 + 2 * i]
-                oy = p[9 + 2 * i]
-                dx = xk[0] - ox
-                dy = xk[1] - oy
+                # Current obstacle position
+                ox_curr = p[8 + 2 * i]
+                oy_curr = p[9 + 2 * i]
+                # Obstacle velocity
+                vx_obs = p[8 + 2 * n_obs_max + 2 * i]
+                vy_obs = p[9 + 2 * n_obs_max + 2 * i]
+                # Predicted position at step k
+                ox_pred = ox_curr + vx_obs * (k * dt)
+                oy_pred = oy_curr + vy_obs * (k * dt)
+                
+                dx = xk[0] - ox_pred
+                dy = xk[1] - oy_pred
                 dist2 = dx * dx + dy * dy + 1e-3
-                cost += self.w_avoid / (dist2 / (self.d_obs_min ** 2) + 1e-3)
+                
+                # HARDER avoidance: inverse barrier with higher weight for predicted collision
+                # Use time-varying weight - higher for near-term predictions
+                time_weight = 1.0 + (N - k) * 0.1  # earlier steps = higher weight
+                cost += self.w_avoid * time_weight / (dist2 / (self.d_obs_min ** 2) + 1e-3)
 
         # Terminal cost - stronger to ensure convergence at horizon end
         xN = z[:, N]
-        cost += self.w_pos * ((xN[0] - p[3]) ** 2 + (xN[1] - p[4]) ** 2) * 5.0  # 5x terminal position weight
+        cost += self.w_pos * ((xN[0] - p[3]) ** 2 + (xN[1] - p[4]) ** 2) * 5.0
         dtheta_N = xN[2] - p[5]
-        cost += self.w_theta * ca.sin(dtheta_N / 2.0) ** 2 * 5.0  # 5x terminal heading weight
+        cost += self.w_theta * ca.sin(dtheta_N / 2.0) ** 2 * 5.0
         # Terminal velocity penalty: should be near zero at horizon end
-        cost += 10.0 * u[:, N-1][0] ** 2  # penalize final velocity
-        cost += 5.0 * u[:, N-1][1] ** 2   # penalize final angular velocity
+        cost += 10.0 * u[:, N-1][0] ** 2
+        cost += 5.0 * u[:, N-1][1] ** 2
 
         # Pack NLP
         nlp = {"x": ca.vertcat(z.reshape((-1, 1)), u.reshape((-1, 1))),
@@ -288,7 +299,36 @@ class CentralController:
                       msg.pose.position.x, msg.pose.position.y)
 
     def _obstacles_cb(self, msg):
-        self.obstacles = [(pose.position.x, pose.position.y) for pose in msg.poses]
+        now = rospy.Time.now()
+        dt = self.dt if not hasattr(self, 'last_obs_time') else (now - self.last_obs_time).to_sec()
+        
+        # Store positions and estimate velocities by index (moving_obstacles publishes fixed order)
+        new_positions = []
+        for pose in msg.poses:
+            new_positions.append((pose.position.x, pose.position.y))
+        
+        # Initialize velocity tracking if needed
+        if not hasattr(self, 'prev_obstacle_positions'):
+            self.prev_obstacle_positions = new_positions
+            self.obstacle_vels = [(0.0, 0.0)] * len(new_positions)
+        elif len(self.prev_obstacle_positions) == len(new_positions):
+            # Estimate velocities by index matching
+            for i in range(len(new_positions)):
+                px, py = self.prev_obstacle_positions[i]
+                nx, ny = new_positions[i]
+                if dt > 0:
+                    vx = (nx - px) / dt
+                    vy = (ny - py) / dt
+                    # Low-pass filter
+                    pvx, pvy = self.obstacle_vels[i]
+                    self.obstacle_vels[i] = (vx * 0.3 + pvx * 0.7, vy * 0.3 + pvy * 0.7)
+            self.prev_obstacle_positions = new_positions
+        else:
+            self.prev_obstacle_positions = new_positions
+            self.obstacle_vels = [(0.0, 0.0)] * len(new_positions)
+        
+        self.obstacles = new_positions
+        self.last_obs_time = now
 
     def _costmap_cb(self, msg, name):
         """Store local costmap for a robot."""
@@ -337,36 +377,56 @@ class CentralController:
         return targets
 
     # ------------------------------------------------------------------ #
-    # Arrival detection
+    # Arrival detection (per-robot, Nav2-style with hysteresis)
     # ------------------------------------------------------------------ #
     def _check_arrival(self, name, target):
-        """Check if robot has arrived at its formation target."""
+        """Check if robot has arrived at its formation target.
+        Uses Nav2-style: position tolerance + yaw tolerance + velocity check + hysteresis."""
         st = self.states[name]
         tx, ty, ttheta = target
 
-        dist = math.hypot(st.x - tx, st.y - ty)
+        dx = st.x - tx
+        dy = st.y - ty
+        dist = math.hypot(dx, dy)
         angle_err = abs(self._normalize_angle(st.theta - ttheta))
+        speed = math.hypot(st.v, st.omega)
 
-        arrived = dist < self.arrival_dist and angle_err < self.arrival_angle
+        # Two-tier tolerance (Nav2 adaptive goal checker)
+        fine_tol = self.arrival_dist        # 0.15m default
+        coarse_tol = self.arrival_dist * 2  # 0.30m hysteresis buffer
+        fine_yaw = self.arrival_angle
+        coarse_yaw = self.arrival_angle * 2
+        stopped_vel = 0.05  # m/s and rad/s
+
+        in_fine = dist < fine_tol and angle_err < fine_yaw
+        in_coarse = dist < coarse_tol and angle_err < coarse_yaw
+        is_stopped = speed < stopped_vel
 
         now = rospy.Time.now()
-        if arrived:
+
+        if self.robot_arrived[name]:
+            # Already arrived: allow drift within coarse tolerance (hysteresis)
+            if not in_coarse:
+                # Left arrival zone - reset
+                self.robot_arrived[name] = False
+                self.arrival_time[name] = None
+                return False
+            return True  # Stay arrived
+
+        # Not yet arrived: check fine tolerance
+        if in_fine:
             if self.arrival_time[name] is None:
                 self.arrival_time[name] = now
             elif (now - self.arrival_time[name]).to_sec() > self.arrival_hold_time:
-                return True
+                # Held in fine zone long enough
+                if is_stopped or (now - self.arrival_time[name]).to_sec() > self.arrival_hold_time * 2:
+                    self.robot_arrived[name] = True
+                    return True
         else:
+            # Left fine zone - reset timer
             self.arrival_time[name] = None
-        return False
 
-    def _check_both_arrived(self, targets):
-        """Check if both robots have arrived at their targets."""
-        for name in self.robots:
-            if name not in targets:
-                return False
-            if not self._check_arrival(name, targets[name]):
-                return False
-        return True
+        return False
 
     @staticmethod
     def _normalize_angle(angle):
@@ -391,7 +451,8 @@ class CentralController:
 
         # Build parameter vector
         n_obs_max = self._n_obs_max()
-        p_len = 8 + 2 * n_obs_max  # state(3)+target(2)+theta(1)+other(2)+obs(2*n_obs_max)
+        # Param layout: state(3) + target(2) + theta(1) + other(2) + obs_pos(2*n_obs_max) + obs_vel(2*n_obs_max)
+        p_len = 8 + 4 * n_obs_max
         p = np.zeros(p_len)
         p[0:3] = [st.x, st.y, st.theta]
         p[3:5] = [tx, ty]
@@ -403,21 +464,34 @@ class CentralController:
         p[6] = ost.x if ost.ready else st.x
         p[7] = ost.y if ost.ready else st.y
 
-        # Obstacles: moving obstacles first, then static obstacles (padded with far-away values)
+        # Obstacles: moving obstacles with predicted positions, then static obstacles
         obs_idx = 8
+        vel_idx = 8 + 2 * n_obs_max
         for i in range(self._n_obs_max()):
             if i < len(self.obstacles):
-                # Moving obstacle
+                # Moving obstacle - current position
                 p[obs_idx + 2 * i] = self.obstacles[i][0]
                 p[obs_idx + 2 * i + 1] = self.obstacles[i][1]
+                # Obstacle velocity (for prediction) - by index
+                if i < len(self.obstacle_vels):
+                    vx, vy = self.obstacle_vels[i]
+                    p[vel_idx + 2 * i] = vx
+                    p[vel_idx + 2 * i + 1] = vy
+                else:
+                    p[vel_idx + 2 * i] = 0.0
+                    p[vel_idx + 2 * i + 1] = 0.0
             elif i - len(self.obstacles) < len(self.static_obstacles):
                 # Static obstacle
                 so = self.static_obstacles[i - len(self.obstacles)]
                 p[obs_idx + 2 * i] = so[0]
                 p[obs_idx + 2 * i + 1] = so[1]
+                p[vel_idx + 2 * i] = 0.0
+                p[vel_idx + 2 * i + 1] = 0.0
             else:
                 p[obs_idx + 2 * i] = 1e3
                 p[obs_idx + 2 * i + 1] = 1e3
+                p[vel_idx + 2 * i] = 0.0
+                p[vel_idx + 2 * i + 1] = 0.0
 
         # Initial guess: warm-start with previous full trajectory if available
         if self.prev_z[name] is not None:
@@ -525,19 +599,6 @@ class CentralController:
             try:
                 targets = self._formation_targets()
 
-                # Check if both robots have arrived (global condition)
-                both_arrived_now = self._check_both_arrived(targets) if self.goal is not None else False
-
-                # Reset both_arrived flag when new goal received
-                if both_arrived_now and not self.both_arrived:
-                    self.both_arrived = True
-                    rospy.loginfo("central_controller: BOTH robots ARRIVED at goal")
-                elif not both_arrived_now and self.both_arrived:
-                    # New goal or robots moved away
-                    self.both_arrived = False
-                    for name in self.robots:
-                        self.arrival_time[name] = None
-
                 for name in self.robots:
                     twist = Twist()  # default: zeros (safe fallback)
                     sol_x = None
@@ -545,11 +606,13 @@ class CentralController:
                     if self.goal is not None and name in targets:
                         target = targets[name]
 
-                        # If both arrived, hold position (zero cmd) for BOTH robots
-                        if self.both_arrived:
-                            rospy.loginfo_throttle(5.0, "central_controller: %s HOLDING at goal (both arrived)", name)
-                            # twist stays zero
+                        # Per-robot arrival check (independent)
+                        if self._check_arrival(name, target):
+                            if not self.robot_arrived[name]:
+                                rospy.loginfo("central_controller: %s ARRIVED at goal", name)
+                            # twist stays zero - robot holds position
                         else:
+                            # Not arrived - run NMPC
                             try:
                                 res = self._solve_robot(name, target)
                             except Exception as exc:
